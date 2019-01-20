@@ -53,6 +53,9 @@ function flushSchedulerQueue () {
   // as we run existing watchers
   for (index = 0; index < queue.length; index++) {
     watcher = queue[index]
+    if (watcher.before) {
+      watcher.before()
+    }
     id = watcher.id
     has[id] = null
     watcher.run()
@@ -81,7 +84,7 @@ function flushSchedulerQueue () {
 
   // call component updated and activated hooks
   callActivatedHooks(activatedQueue)
-  callUpdateHooks(updatedQueue)
+  callUpdatedHooks(updatedQueue)
 
   // devtool hook
   /* istanbul ignore if */
@@ -90,12 +93,12 @@ function flushSchedulerQueue () {
   }
 }
 
-function callUpdateHooks (queue) {
+function callUpdatedHooks (queue) {
   let i = queue.length
   while (i--) {
     const watcher = queue[i]
     const vm = watcher.vm
-    if (vm._watcher === watcher && vm._isMounted) {
+    if (vm._watcher === watcher && vm._isMounted && !vm._isDestroyed) {
       callHook(vm, 'updated')
     }
   }
@@ -142,6 +145,11 @@ export function queueWatcher (watcher: Watcher) {
     // queue the flush
     if (!waiting) {
       waiting = true
+
+      if (process.env.NODE_ENV !== 'production' && !config.async) {
+        flushSchedulerQueue()
+        return
+      }
       nextTick(flushSchedulerQueue)
     }
   }
